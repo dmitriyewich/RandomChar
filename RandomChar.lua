@@ -1,17 +1,31 @@
 script_name("RandomChar")
 script_author("dmitriyewich")
-script_url("https://vk.com/dmitriyewichmods")
+script_url("https://vk.com/dmitriyewichmods", 'https://github.com/dmitriyewich/RandomChar')
 script_properties('work-in-pause', 'forced-reloading-only')
-script_version("0.2")
+script_version("0.3")
 
 local lffi, ffi = pcall(require, 'ffi')
 local lmemory, memory = pcall(require, 'memory')
 
 local lencoding, encoding = pcall(require, 'encoding')
-
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
 CP1251 = encoding.CP1251
+
+local folder =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.ide"
+local folder_txt =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.txt"
+local folder_custom =  getGameDirectory() .."\\modloader\\RandomChar\\CUSTOM.ide"
+
+changelog = [[
+	RandomChar v0.1
+		- Релиз
+	RandomChar v0.2
+		- Микрофикс: Добавлено игнорирование оригинальной модели в папке.
+	RandomChar v0.3
+		- Исправлено залипание анимации, если смена скина произошла в машине
+		- Оптимизирован генератор ide, теперь на 0.0000001 быстрее формируется
+		- Микрофиксы
+]]
 
 local function isarray(t, emptyIsObject)
 	if type(t)~='table' then return false end
@@ -208,7 +222,7 @@ local function neatJSON(value, opts) -- https://github.com/Phrogz/NeatJSON
 end
 
 function savejson(table, path)
-    local f = io.open(path, "w")
+    local f = io.open(path, "w+")
     f:write(table)
     f:close()
 end
@@ -232,13 +246,12 @@ else
 end
 
 math.randomseed( os.clock()^5 )
-math.random() math.random() math.random()
+math.random(); math.random(); math.random()
 
 function random(min, max)
-	rand = math.random(min, max)
+	local rand = math.random(min, max)
     return tonumber(rand)
 end
-
 
 local testNameModel = {
 	[0] = "cj", [1] = "truth", [2] = "maccer", [3] = "andre", [4] = "bbthin", [5] = "bb", [6] = "emmet", [7] = "male01", [8] = "janitor", [9] = "bfori",
@@ -277,24 +290,15 @@ local testNameModel = {
 	[299] = "claude", [300] = "lapdna", [301] = "sfpdna", [302] = "lvpdna", [303] = "lapdpc", [304] = "lapdpd", [305] = "lvpdpc", [306] = "wfyclpd", [307] = "vbfycpd",
 	[308] = "wfyclem", [309] = "wfycllv", [310] = "csherna", [311] = "dsherna";}
 
-
-local text_text = [[peds
-1, TRUTH, TRUTH, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0, null, 9,9, PED_TYPE_SPC,VOICE_GNG_TRUTH ,VOICE_GNG_TRUTH
+--Taken from the sources of Custom SAA2 https://ugbase.eu/threads/samp-saa-custom-saa2-tool.4810/
+local standard_peds = [[1, TRUTH, TRUTH, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0, null, 9,9, PED_TYPE_SPC,VOICE_GNG_TRUTH ,VOICE_GNG_TRUTH
 2, MACCER, MACCER, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0, null, 9,9, PED_TYPE_SPC, VOICE_GNG_MACCER , VOICE_GNG_MACCER
-3, ANDRE, ANDRE, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01 #Andre
-4, BBTHIN, BBTHIN, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_BIG_BEAR, VOICE_GNG_BIG_BEAR #Big Bear
-5, BB, BB, CIVMALE, STAT_SENSIBLE_GUY, fatman, 0, 0, fatman, 1,4, PED_TYPE_GANG, VOICE_GNG_BIG_BEAR, VOICE_GNG_BIG_BEAR #Big Bear
-6, EMMET, EMMET, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01 #Emmet
-8, JANITOR, JANITOR, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01 #Janitor
-42, JETHRO, JETHRO, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01 #Jethro
-65, KENDL, KENDL, CIVFEMALE, STAT_SENSIBLE_GUY, woman, 0, 0, woman, 1,4, PED_TYPE_GEN, VOICE_GEN_HFYRI, VOICE_GEN_HFYRI #Kendl
-86, RYDER3, RYDER3, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_RYDER, VOICE_GNG_RYDER #Ryder
-119, SINDACO, SINDACO, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01 #Sindacco
-149, SMOKEV, SMOKEV, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_SMOKE, VOICE_GNG_SMOKE #Big Smoke
-208, SUZIE, SUZIE, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_STRI1, VOICE_GNG_STRI1 #Su Xi Mu (Suzie)
-273, TBONE, TBONE, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_TBONE, VOICE_GNG_TBONE #T-Bone Mendez
-289, ZERO, ZERO, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01 #Zero
+3, ANDRE, ANDRE, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01
+4, BBTHIN, BBTHIN, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_BIG_BEAR, VOICE_GNG_BIG_BEAR
+5, BB, BB, CIVMALE, STAT_SENSIBLE_GUY, fatman, 0, 0, fatman, 1,4, PED_TYPE_GANG, VOICE_GNG_BIG_BEAR, VOICE_GNG_BIG_BEAR
+6, EMMET, EMMET, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01
 7, male01, male01, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01
+8, JANITOR, JANITOR, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01
 9, BFORI, BFORI, CIVFEMALE, STAT_COWARD, woman, 120C,0, man,7,3,PED_TYPE_GEN,VOICE_GEN_BFORI,VOICE_GEN_BFORI
 10, BFOST, BFOST, CIVFEMALE, STAT_STREET_GIRL, oldfatwoman,1003,0, null,9,3,PED_TYPE_GEN, VOICE_GEN_BFOST, VOICE_GEN_BFOST
 11, VBFYCRP, VBFYCRP, CIVFEMALE, STAT_SUIT_GIRL, woman, 130C,0, null,3,7,PED_TYPE_GEN,VOICE_GEN_BFYCRP ,VOICE_GEN_BFYCRP
@@ -328,6 +332,7 @@ local text_text = [[peds
 39, HFOST, hfost, CIVFEMALE, STAT_OLD_GIRL, oldfatwoman,1003,0, man,9,3,PED_TYPE_GEN,VOICE_GEN_HFOST ,VOICE_GEN_HFOST
 40, HFYRI, HFYRI, CIVFEMALE, STAT_COWARD, sexywoman, 120C,1, null,7,3,PED_TYPE_GEN,VOICE_GEN_HFYRI ,VOICE_GEN_HFYRI
 41, HFYST, HFYST, CIVFEMALE, STAT_STREET_GIRL, woman,1983,1, null,6,1,PED_TYPE_GEN,VOICE_GEN_HFYST ,VOICE_GEN_HFYST
+42, JETHRO, JETHRO, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01
 43, HMORI, HMORI, CIVMALE, STAT_COWARD, man, 120C,0, man,10,9,PED_TYPE_GEN,VOICE_GEN_HMORI ,VOICE_GEN_HMORI
 44, HMOST, HMOST, CIVMALE, STAT_STREET_GUY, man,1003,0, man,2,2,PED_TYPE_GEN,VOICE_GEN_HMOST ,VOICE_GEN_HMOST
 45, HMYBE, HMYBE, CIVMALE, STAT_BEACH_GUY, man,1000,0, beach,7,3,PED_TYPE_GEN,VOICE_GEN_HMYBE ,VOICE_GEN_HMYBE
@@ -350,6 +355,7 @@ local text_text = [[peds
 62, WMOPJ, WMOpj, CIVMALE, STAT_OLD_GUY, oldman,1000,0, null,1,1,PED_TYPE_GEN,VOICE_GEN_WMOPJ ,VOICE_GEN_WMOPJ
 63, BFYPRO, BFYPRO, PROSTITUTE, STAT_PROSTITUTE, pro,1000,1, man,1,4,PED_TYPE_GEN,VOICE_GEN_BFYPRO,VOICE_GEN_BFYPRO
 64, HFYPRO, HFYPRO, PROSTITUTE, STAT_PROSTITUTE, pro,1000,1, man,1,4,PED_TYPE_GEN,VOICE_GEN_HFYPRO ,VOICE_GEN_HFYPRO
+65, KENDL, KENDL, CIVFEMALE, STAT_SENSIBLE_GUY, woman, 0, 0, woman, 1,4, PED_TYPE_GEN, VOICE_GEN_HFYRI, VOICE_GEN_HFYRI
 66, BMYPOL1, BMYpol1, CIVMALE, STAT_TOUGH_GUY, man, 110F,1, man,0,0,PED_TYPE_GEN,VOICE_GEN_BMYPOL1 ,VOICE_GEN_BMYPOL1
 67, BMYPOL2, BMYpol2, CIVMALE, STAT_TOUGH_GUY, man, 110F,1, man,8,8,PED_TYPE_GEN,VOICE_GEN_BMYPOL2 ,VOICE_GEN_BMYPOL2
 68, WMOPREA, WMOprea, CIVMALE, STAT_SUIT_GUY, man, 170F,0, man,1,10,PED_TYPE_GEN,VOICE_GEN_WMOPREA ,VOICE_GEN_WMOPREA
@@ -369,6 +375,7 @@ local text_text = [[peds
 83, VBMYELV, VBMYELV, CIVMALE, STAT_TOUGH_GUY, man, 170F,1, null,2,1,PED_TYPE_GEN,VOICE_GEN_VBMYELV,VOICE_GEN_VBMYELV
 84, VIMYELV, VIMYELV, CIVMALE, STAT_COWARD, man, 170F,1, null,1,1,PED_TYPE_GEN,VOICE_GEN_VIMYELV,VOICE_GEN_VIMYELV
 85, VWFYPRO, VWFYPRO, PROSTITUTE, STAT_PROSTITUTE, pro,1000,1, man,1,4,PED_TYPE_GEN,VOICE_GEN_VWFYPRO,VOICE_GEN_VWFYPRO
+86, RYDER3, RYDER3, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_RYDER, VOICE_GNG_RYDER
 87, VWFYST1, VWFYST1, CIVFEMALE, STAT_STREET_GIRL, sexywoman,1000,1, man,1,4,PED_TYPE_GEN,VOICE_GEN_VWFYST1 ,VOICE_GEN_VWFYST1
 88, WFORI, WFORI, CIVFEMALE, STAT_COWARD, oldwoman, 120C,0, man,10,1,PED_TYPE_GEN,VOICE_GEN_WFORI,VOICE_GEN_WFORI
 89, WFOST, WFOST, CIVFEMALE, STAT_STREET_GIRL, oldfatwoman,1003,0, man,1,2,PED_TYPE_GEN,VOICE_GEN_WFOST,VOICE_GEN_WFOST
@@ -401,6 +408,7 @@ local text_text = [[peds
 116, VLA3, VLA3, GANG8, STAT_GANG8, gang1, 110F,1, man,0,0,PED_TYPE_GANG,VOICE_GNG_VLA5 ,VOICE_GNG_VLA5
 117, TRIADA, TRIADA, GANG7, STAT_GANG7, man, 110F,1, man,4,4,PED_TYPE_GANG,VOICE_GNG_STRI1 ,VOICE_GNG_STRI5
 118, TRIADB, TRIADB, GANG7, STAT_GANG7, man, 110F,1, man,4,4,PED_TYPE_GANG,VOICE_GNG_STRI1 ,VOICE_GNG_STRI1
+119, SINDACO, SINDACO, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01
 120, TRIBOSS, TRIBOSS, GANG7, STAT_GANG7, man, 110F,1, man,4,4,PED_TYPE_GANG,VOICE_GNG_STRI1 ,VOICE_GNG_STRI1
 121, DNB1, DNB1 , GANG5, STAT_GANG5, gang1, 110F,1, man,3,4,PED_TYPE_GANG,VOICE_GNG_DNB1 ,VOICE_GNG_DNB1
 122, DNB2, DNB2 , GANG5, STAT_GANG5, gang2, 110F,1, man,3,4,PED_TYPE_GANG,VOICE_GNG_DNB2 ,VOICE_GNG_DNB2
@@ -430,6 +438,7 @@ local text_text = [[peds
 146, HMYCM, hmycm, CRIMINAL, STAT_CRIMINAL, man, 110F,1, man,8,10,PED_TYPE_GEN,VOICE_GEN_HMYCM ,VOICE_GEN_HMYCM
 147, WMYBU, wmybu, CIVMALE, STAT_COWARD, man, 120C,1, man,6,3,PED_TYPE_GEN,VOICE_GEN_WMYBU,VOICE_GEN_WMYBU
 148, BFYBU, bfybu, CIVFEMALE, STAT_SUIT_GIRL, busywoman, 120C,1, man,3,7,PED_TYPE_GEN,VOICE_GEN_BFYBU ,VOICE_GEN_BFYBU
+149, SMOKEV, SMOKEV, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_SMOKE, VOICE_GNG_SMOKE
 150, WFYBU, wfybu, CIVFEMALE, STAT_SUIT_GIRL, busywoman, 120C,1, man,9,2,PED_TYPE_GEN,VOICE_GEN_WFYBU,VOICE_GEN_WFYBU
 151, DWFYLC1, Dwfylc1, CIVFEMALE, STAT_TOUGH_GIRL, sexywoman,1983,1, man,1,1,PED_TYPE_GEN,VOICE_GEN_DWFYLC1 ,VOICE_GEN_DWFYLC2
 152, WFYPRO, WFYpro, PROSTITUTE, STAT_PROSTITUTE, pro,1000,1, man,1,4,PED_TYPE_GEN,VOICE_GEN_WFYPRO,VOICE_GEN_WFYPRO
@@ -488,6 +497,7 @@ local text_text = [[peds
 205, WFYBURG,  WFYBURG , CIVFEMALE, STAT_STREET_GIRL, woman, 1FFF,1, null,0,3,PED_TYPE_GFD,VOICE_GFD_WFYBURG ,VOICE_GFD_WFYBURG
 206, VWMYCD,   VWMYCD , CIVMALE, STAT_TAXIDRIVER, man,0040,0, null,6,5,PED_TYPE_GEN,VOICE_GEN_VWMYCD ,VOICE_GEN_VWMYCD
 207, VHFYPRO,   VHFYPRO , PROSTITUTE, STAT_PROSTITUTE, pro,1000,1, man,1,4,PED_TYPE_GEN,VOICE_GEN_VHFYPRO ,VOICE_GEN_VHFYPRO
+208, SUZIE, SUZIE, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_STRI1, VOICE_GNG_STRI1
 209, OMONOOD,   OMONOOD , CIVMALE, STAT_OLD_GUY, oldman, 1FFF,0, null,1,4,PED_TYPE_GEN,VOICE_GEN_OMOST ,VOICE_GEN_OMOST
 210, OMOBOAT,   OMOBOAT , CIVMALE, STAT_OLD_GUY, oldman, 1FFF,0, null,1,4,PED_TYPE_GEN,VOICE_GEN_OMOBOAT ,VOICE_GEN_OMOBOAT
 211, WFYCLOT,   WFYCLOT , CIVFEMALE, STAT_STREET_GIRL, woman, 1FFF,0, null,1,4,PED_TYPE_GFD,VOICE_GFD_WFYCLOT ,VOICE_GFD_WFYCLOT
@@ -553,6 +563,7 @@ local text_text = [[peds
 271, RYDER2,RYDER2, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0, null, 9,9, PED_TYPE_SPC, VOICE_GNG_RYDER , VOICE_GNG_RYDER
 272, FORELLI,FORELLI, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0, null, 9,9, PED_TYPE_SPC, VOICE_GNG_MAFBOSS , VOICE_GNG_MAFBOSS
 274, laemt1, laemt1, MEDIC, STAT_MEDIC, swat, 1FFF, 0, medic, 9,9, PED_TYPE_EMG,VOICE_EMG_EMT1 ,VOICE_EMG_EMT5
+273, TBONE, TBONE, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_TBONE, VOICE_GNG_TBONE
 275, lvemt1, lvemt1, MEDIC, STAT_MEDIC, swat, 1FFF, 0, medic, 9,9, PED_TYPE_EMG,VOICE_EMG_EMT1 ,VOICE_EMG_EMT5
 276, sfemt1, sfemt1, MEDIC, STAT_MEDIC, swat, 1FFF, 0, medic, 9,9, PED_TYPE_EMG,VOICE_EMG_EMT1 ,VOICE_EMG_EMT5
 277, lafd1, lafd1, FIREMAN, STAT_FIREMAN, swat, 1FFF, 0, null, 9,9, PED_TYPE_GEN,VOICE_GEN_NOVOICE ,VOICE_GEN_NOVOICE
@@ -567,6 +578,7 @@ local text_text = [[peds
 286, fbi, fbi, COP, STAT_COP, swat, 1FFF, 0, null, 9,9, PED_TYPE_EMG,VOICE_EMG_FBI2 ,VOICE_EMG_FBI6
 287, army, army, COP, STAT_COP, swat, 1FFF, 0, null, 9,9, PED_TYPE_EMG, VOICE_EMG_ARMY1 ,VOICE_EMG_ARMY3
 288, dsher, dsher, COP, STAT_COP, swat, 1FFF, 0, null, 9,9, PED_TYPE_EMG,VOICE_EMG_RCOP1 ,VOICE_EMG_RCOP4
+289, ZERO, ZERO, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01
 290, ROSE, ROSE, CIVMALE, STAT_STREET_GUY, man, 1FFF,0, null,1,4,PED_TYPE_GEN,VOICE_GEN_NOVOICE, VOICE_GEN_NOVOICE
 291, PAUL, PAUL, CIVMALE, STAT_STREET_GUY, man, 1FFF,0, null,1,4,PED_TYPE_GEN,VOICE_GEN_NOVOICE, VOICE_GEN_NOVOICE
 292, CESAR, CESAR, CIVMALE, STAT_STREET_GUY, man, 1FFF,0, null,1,4,PED_TYPE_GEN,VOICE_GNG_CESAR, VOICE_GNG_CESAR
@@ -590,12 +602,9 @@ local text_text = [[peds
 310, csherna, csherna, COP, STAT_COP, swat, 1FFF, 0, null, 9,9, PED_TYPE_EMG,VOICE_EMG_RCOP1 ,VOICE_EMG_RCOP4
 311, dsherna, dsherna, COP, STAT_COP, swat, 1FFF, 0, null, 9,9, PED_TYPE_EMG,VOICE_EMG_RCOP1 ,VOICE_EMG_RCOP4]]
 
-local freeID = {}
-
 local tbl_peds = {}
 
 function main()
-	local folder =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.ide"
 	if not doesFileExist(folder) then GeneratedIDE() end
 
 	repeat wait(0) until memory.read(0xC8D4C0, 4, false) == 9
@@ -628,7 +637,8 @@ function fixed_camera_to_skin() -- проверка на приклеплени�
 end
 
 function setCharModelId(pedHandle, modelId)
-	lua_thread.create(function() wait(0)
+	lua_thread.create(function() wait(0.074)
+
 		local charPtr = getCharPointer(pedHandle)
 		local modelId = tonumber(modelId)
 
@@ -637,93 +647,88 @@ function setCharModelId(pedHandle, modelId)
 				requestModel(modelId)
 				loadAllModelsNow()
 			end
+
+			repeat wait(0) until hasModelLoaded(modelId)
+
 			ffi.cast("void (__thiscall *)(int, int)", 0x5E4880)(charPtr, modelId)
-			-- if not isCharInAnyCar(pedHandle) then
-				clearCharTasks(pedHandle)
-			-- end
+
+			clearCharTasks(pedHandle)
+
+			if isCharSittingInAnyCar(pedHandle) then
+				local handle_car = storeCarCharIsInNoSave(pedHandle)
+				local id_seat = getSeatInCar(handle_car, pedHandle)
+				if id_seat == -1 then
+					warpCharIntoCar(pedHandle, handle_car)
+				else
+					warpCharIntoCarAsPassenger(pedHandle, handle_car, id_seat)
+				end
+			end
+
 			markModelAsNoLongerNeeded(modelID)
 		end
 	end)
 end
 
+function getSeatInCar(car, ped)
+    if doesVehicleExist(car) then
+        local max_s = getMaximumNumberOfPassengers(car)
+        for i = -1, max_s do
+            if not isCarPassengerSeatFree(car, i) then
+                if getCharInCarPassengerSeat(car, i) == ped then
+                    return i
+                end
+            end
+        end
+    end
+end
+
 function GeneratedIDE()
-	local folder =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.ide"
-	local folder_json =  getGameDirectory() .."\\moonloader\\config\\RandomChar.json"
-	local folder_txt =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.txt"
-	local folder_custom =  getGameDirectory() .."\\modloader\\RandomChar\\CUSTOM.ide"
-	os.remove(folder_json)
+	local freeID = {}
 	os.remove(folder_custom)
 	os.remove(folder_txt)
 	for i = 1, 20000 do
-		if not isModelAvailable(i) then
+		if not isModelAvailable(i) and not isModelInCdimage(i) then
 			freeID[#freeID+1] = i
 		end
 	end
 
-	local file = io.open(folder, 'w')
-	file:write(text_text)
-	file:close()
-
-	local test_tblasdaw = {}
-	f = io.open(folder,"a+")
-	for line in f:lines() do
-		local v_1, v_2, v_3 = tostring(line):match('^(%d+),(.+),(.+,.+,.+,.+,.+,.+,.+,.+,.+,.+,.+)$')
-		if v_1 ~= nil then
-			test_tblasdaw[tonumber(v_1)] = v_3
-		end
+	local t={}
+	for str in string.gmatch(standard_peds, "([^\n]+)") do
+		local v_1, v_2, v_3 = tostring(str):match('^(%d+),(.+),(.+,.+,.+,.+,.+,.+,.+,.+,.+,.+,.+)$')
+		t[tonumber(v_1)] = v_3
 	end
-	f:close()
 
-	local file = io.open(folder, 'w')
-	file:write("peds")
-	file:close()
+	config.chars = {}
 
-	f = io.open(folder,"a+")
-	local tableOfLines = {}
-	for line in f:lines() do
-		if not line:find("^end$") then
-			table.insert(tableOfLines, line)
-		end
-	end
-	f:close()
-
-	local file = io.open(folder, 'w')
-	file:write('')
-	file:close()
+	local list = 'peds\n'
 
 	for k, v in ipairs(testNameModel) do
 		local folder_dff = getGameDirectory() .."\\modloader\\RandomChar\\" ..v.. "\\*.dff"
 		local search, file = findFirstFile(folder_dff)
-		local count = 0
 		if file ~= nil then config.chars[tostring(k)] = {k} end
 		while file do
 			if file ~= (v..".dff") then
-				count = count+1
 				local no_dff = file:gsub("%.dff", "")
-				local char_new = freeID[1] .. ", " .. no_dff .. ", " .. no_dff .. ", " .. test_tblasdaw[k]
+				local char_new = freeID[1] .. ", " .. no_dff .. ", " .. no_dff .. ", " .. t[k] .. "\n"
 				config.chars[tostring(k)][#config.chars[tostring(k)]+1] = tonumber(freeID[1])
 				table.remove(freeID, 1)
-				tableOfLines[#tableOfLines+1] = char_new
+				list = list .. char_new
 			end
 			file = findNextFile(search)
 		end
+		if k == #testNameModel then list = list .. 'end' end
 	end
 
-	local file = io.open(folder, 'a')
-	for i = 1, #tableOfLines do
-		file:write(tableOfLines[i]..'\n')
-	end
-	file:write("end")
+
+	local file = io.open(folder, 'w+')
+	file:write(list)
 	file:close()
 
-	local file = io.open(folder_custom, 'a')
-	for i = 1, #tableOfLines do
-		file:write(tableOfLines[i]..'\n')
-	end
-	file:write("end")
+	local file = io.open(folder_custom, 'w+')
+	file:write(list)
 	file:close()
 
-	local file = io.open(folder_txt, 'w')
+	local file = io.open(folder_txt, 'w+')
 	file:write("IDE data\\RandomChar.ide")
 	file:close()
 
@@ -731,3 +736,6 @@ function GeneratedIDE()
 	callFunction(0x81E5E6, 4, 0, 0, u8:decode"[RU] Сформированы:\n	RandomChar.ide\\CUSTOM.ide\\RandomChar.txt\n	Необходимо перезапустить игру\n[EN] Generated\n	RandomChar.ide\\CUSTOM.ide\\RandomChar.txt\n	Need restart game", "RandomChar.lua", 0x00040000)
 	os.execute('taskkill /IM gta_sa.exe /F')
 end
+
+-- Licensed under the GPL-3.0 License
+-- Copyright (c) 2021, dmitriyewich <https://github.com/dmitriyewich/RandomChar>
