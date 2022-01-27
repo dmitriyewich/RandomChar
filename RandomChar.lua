@@ -2,7 +2,7 @@ script_name("RandomChar")
 script_author("dmitriyewich")
 script_url("https://vk.com/dmitriyewichmods", 'https://github.com/dmitriyewich/RandomChar')
 script_properties('work-in-pause', 'forced-reloading-only')
-script_version("0.3")
+script_version("0.4")
 
 local lffi, ffi = pcall(require, 'ffi')
 local lmemory, memory = pcall(require, 'memory')
@@ -10,7 +10,6 @@ local lmemory, memory = pcall(require, 'memory')
 local lencoding, encoding = pcall(require, 'encoding')
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
-CP1251 = encoding.CP1251
 
 local folder =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.ide"
 local folder_txt =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.txt"
@@ -25,7 +24,105 @@ changelog = [[
 		- Исправлено залипание анимации, если смена скина произошла в машине
 		- Оптимизирован генератор ide, теперь на 0.0000001 быстрее формируется
 		- Микрофиксы
+	RandomChar v0.4
+		- Изменен метод смены скина на аналог хука onSetPlayerSkin
 ]]
+
+-- AUTHOR main hooks lib: RTD/RutreD(https://www.blast.hk/members/126461/)
+ffi.cdef[[
+    int VirtualProtect(void* lpAddress, unsigned long dwSize, unsigned long flNewProtect, unsigned long* lpflOldProtect);
+    void* VirtualAlloc(void* lpAddress, unsigned long dwSize, unsigned long  flAllocationType, unsigned long flProtect);
+    int VirtualFree(void* lpAddress, unsigned long dwSize, unsigned long dwFreeType);
+]]
+local function copy(dst, src, len)
+    return ffi.copy(ffi.cast('void*', dst), ffi.cast('const void*', src), len)
+end
+local buff = {free = {}}
+local function VirtualProtect(lpAddress, dwSize, flNewProtect, lpflOldProtect)
+    return ffi.C.VirtualProtect(ffi.cast('void*', lpAddress), dwSize, flNewProtect, lpflOldProtect)
+end
+local function VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect, blFree)
+    local alloc = ffi.C.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect)
+    if blFree then
+        table.insert(buff.free, function()
+            ffi.C.VirtualFree(alloc, 0, 0x8000)
+        end)
+    end
+    return ffi.cast('intptr_t', alloc)
+end
+--JMP HOOKS
+local jmp_hook = {hooks = {}}
+function jmp_hook.new(cast, callback, hook_addr, size, trampoline, org_bytes_tramp)
+    jit.off(callback, true) --off jit compilation | thx FYP
+    local size = size or 5
+    local trampoline = trampoline or false
+    local new_hook, mt = {}, {}
+    local detour_addr = tonumber(ffi.cast('intptr_t', ffi.cast(cast, callback)))
+    local old_prot = ffi.new('unsigned long[1]')
+    local org_bytes = ffi.new('uint8_t[?]', size)
+    copy(org_bytes, hook_addr, size)
+    if trampoline then
+        local alloc_addr = VirtualAlloc(nil, size + 5, 0x1000, 0x40, true)
+        local trampoline_bytes = ffi.new('uint8_t[?]', size + 5, 0x90)
+        if org_bytes_tramp then
+            local i = 0
+            for byte in org_bytes_tramp:gmatch('(%x%x)') do
+                trampoline_bytes[i] = tonumber(byte, 16)
+                i = i + 1
+            end
+        else
+            copy(trampoline_bytes, org_bytes, size)
+        end
+        trampoline_bytes[size] = 0xE9
+        ffi.cast('int32_t*', trampoline_bytes + size + 1)[0] = hook_addr - tonumber(alloc_addr) - size + (size - 5)
+        copy(alloc_addr, trampoline_bytes, size + 5)
+        new_hook.call = ffi.cast(cast, alloc_addr)
+        mt = {__call = function(self, ...)
+            return self.call(...)
+        end}
+    else
+        new_hook.call = ffi.cast(cast, hook_addr)
+        mt = {__call = function(self, ...)
+            self.stop()
+            local res = self.call(...)
+            self.start()
+            return res
+        end}
+    end
+    local hook_bytes = ffi.new('uint8_t[?]', size, 0x90)
+    hook_bytes[0] = 0xE9
+    ffi.cast('int32_t*', hook_bytes + 1)[0] = detour_addr - hook_addr - 5
+    new_hook.status = false
+    local function set_status(bool)
+        new_hook.status = bool
+        VirtualProtect(hook_addr, size, 0x40, old_prot)
+        copy(hook_addr, bool and hook_bytes or org_bytes, size)
+        VirtualProtect(hook_addr, size, old_prot[0], old_prot)
+    end
+    new_hook.stop = function() set_status(false) end
+    new_hook.start = function() set_status(true) end
+    new_hook.start()
+    if org_bytes[0] == 0xE9 or org_bytes[0] == 0xE8 then
+        print('[WARNING] rewrote another hook'.. (trampoline and ' (old hook was disabled, through trampoline)' or ''))
+    end
+    table.insert(jmp_hook.hooks, new_hook)
+    return setmetatable(new_hook, mt)
+end
+--JMP HOOKS
+--DELETE HOOKS
+addEventHandler('onScriptTerminate', function(scr)
+    if scr == script.this then
+        for i, hook in ipairs(jmp_hook.hooks) do
+            if hook.status then
+                hook.stop()
+            end
+        end
+        for i, free in ipairs(buff.free) do
+            free()
+        end
+    end
+end)
+--DELETE HOOKS
 
 local function isarray(t, emptyIsObject)
 	if type(t)~='table' then return false end
@@ -253,7 +350,7 @@ function random(min, max)
     return tonumber(rand)
 end
 
-local testNameModel = {
+local NameModel = {
 	[0] = "cj", [1] = "truth", [2] = "maccer", [3] = "andre", [4] = "bbthin", [5] = "bb", [6] = "emmet", [7] = "male01", [8] = "janitor", [9] = "bfori",
 	[10] = "bfost", [11] = "vbfycrp", [12] = "bfyri", [13] = "bfyst", [14] = "bmori", [15] = "bmost", [16] = "bmyap", [17] = "bmybu", [18] = "bmybe",
 	[19] = "bmydj", [20] = "bmyri", [21] = "bmycr", [22] = "bmyst", [23] = "wmybmx", [24] = "wbdyg1", [25] = "wbdyg2", [26] = "wmybp", [27] = "wmycon",
@@ -604,82 +701,31 @@ local standard_peds = [[1, TRUTH, TRUTH, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0
 
 local tbl_peds = {}
 
+function SetModelIndex(this, modelIndex)
+	if config.chars[tostring(modelIndex)] ~= nil then
+		need_id = config.chars[tostring(modelIndex)][random(1, #config.chars[tostring(modelIndex)])]
+		if not hasModelLoaded(need_id) then
+			requestModel(need_id)
+			loadAllModelsNow()
+		end
+		modelIndex = need_id
+	end
+	SetModelIndex(this, modelIndex)
+end
+
 function main()
 	if not doesFileExist(folder) then GeneratedIDE() end
 
 	repeat wait(0) until memory.read(0xC8D4C0, 4, false) == 9
 	repeat wait(0) until fixed_camera_to_skin()
 
-	while true do wait(0)
-		for i = 1, #getAllChars() do
+	SetModelIndex = jmp_hook.new("void (__thiscall *)(uintptr_t this, unsigned int modelIndex)", SetModelIndex, 0x5E4880)
 
-			if tbl_peds[getAllChars()[i]] ~= nil then goto continue end
-			tbl_peds[getAllChars()[i]] = {[1] = getAllChars()[i], [2] = false, [3] = getCharModel(getAllChars()[i])}
-			::continue::
-
-			if tbl_peds[getAllChars()[i]] ~= nil and not tbl_peds[getAllChars()[i]][2] and config.chars[tostring(tbl_peds[getAllChars()[i]][3])] ~= nil then
-				local need_tbl = config.chars[tostring(tbl_peds[getAllChars()[i]][3])]
-				setCharModelId(tbl_peds[getAllChars()[i]][1], need_tbl[random(1, #need_tbl)])
-				tbl_peds[getAllChars()[i]][2] = true
-			end
-		end
-		for k, v in pairs(tbl_peds) do
-			if not doesCharExist(k) then
-				tbl_peds[k] = nil
-			end
-		end
-	end
-
+	wait(-1)
 end
 
 function fixed_camera_to_skin() -- проверка на приклепление камеры к скину
 	return (memory.read(getModuleHandle('gta_sa.exe') + 0x76F053, 1, false) >= 1 and true or false)
-end
-
-function setCharModelId(pedHandle, modelId)
-	lua_thread.create(function() wait(0.074)
-
-		local charPtr = getCharPointer(pedHandle)
-		local modelId = tonumber(modelId)
-
-		if charPtr >= 1 and isModelAvailable(modelId) and isModelInCdimage(modelId) then
-			if not hasModelLoaded(modelId) then
-				requestModel(modelId)
-				loadAllModelsNow()
-			end
-
-			repeat wait(0) until hasModelLoaded(modelId)
-
-			ffi.cast("void (__thiscall *)(int, int)", 0x5E4880)(charPtr, modelId)
-
-			clearCharTasks(pedHandle)
-
-			if isCharSittingInAnyCar(pedHandle) then
-				local handle_car = storeCarCharIsInNoSave(pedHandle)
-				local id_seat = getSeatInCar(handle_car, pedHandle)
-				if id_seat == -1 then
-					warpCharIntoCar(pedHandle, handle_car)
-				else
-					warpCharIntoCarAsPassenger(pedHandle, handle_car, id_seat)
-				end
-			end
-
-			markModelAsNoLongerNeeded(modelID)
-		end
-	end)
-end
-
-function getSeatInCar(car, ped)
-    if doesVehicleExist(car) then
-        local max_s = getMaximumNumberOfPassengers(car)
-        for i = -1, max_s do
-            if not isCarPassengerSeatFree(car, i) then
-                if getCharInCarPassengerSeat(car, i) == ped then
-                    return i
-                end
-            end
-        end
-    end
 end
 
 function GeneratedIDE()
@@ -702,7 +748,7 @@ function GeneratedIDE()
 
 	local list = 'peds\n'
 
-	for k, v in ipairs(testNameModel) do
+	for k, v in ipairs(NameModel) do
 		local folder_dff = getGameDirectory() .."\\modloader\\RandomChar\\" ..v.. "\\*.dff"
 		local search, file = findFirstFile(folder_dff)
 		if file ~= nil then config.chars[tostring(k)] = {k} end
@@ -716,7 +762,7 @@ function GeneratedIDE()
 			end
 			file = findNextFile(search)
 		end
-		if k == #testNameModel then list = list .. 'end' end
+		if k == #NameModel then list = list .. 'end' end
 	end
 
 
@@ -733,8 +779,8 @@ function GeneratedIDE()
 	file:close()
 
 	savejson(convertTableToJsonString(config), "moonloader/config/RandomChar.json")
-	callFunction(0x81E5E6, 4, 0, 0, u8:decode"[RU] Сформированы:\n	RandomChar.ide\\CUSTOM.ide\\RandomChar.txt\n	Необходимо перезапустить игру\n[EN] Generated\n	RandomChar.ide\\CUSTOM.ide\\RandomChar.txt\n	Need restart game", "RandomChar.lua", 0x00040000)
-	os.execute('taskkill /IM gta_sa.exe /F')
+	callFunction(0x81E5E6, 4, 0, 0, u8:decode"[RU] Сформированы:\n	RandomChar.ide\\CUSTOM.ide\\RandomChar.txt\n	Необходимо перезапустить игру\n[EN] Generated:\n	RandomChar.ide\\CUSTOM.ide\\RandomChar.txt\n	Need restart game", "RandomChar.lua", 0x00040000)
+	os.execute('taskkill /IM gta_sa.exe /F /T')
 end
 
 -- Licensed under the GPL-3.0 License
