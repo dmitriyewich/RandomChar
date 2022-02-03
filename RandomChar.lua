@@ -2,7 +2,7 @@ script_name("RandomChar")
 script_author("dmitriyewich")
 script_url("https://vk.com/dmitriyewichmods", 'https://github.com/dmitriyewich/RandomChar')
 script_properties('work-in-pause', 'forced-reloading-only')
-script_version("0.4")
+script_version("0.5")
 
 local lffi, ffi = pcall(require, 'ffi')
 local lmemory, memory = pcall(require, 'memory')
@@ -11,7 +11,6 @@ local lencoding, encoding = pcall(require, 'encoding')
 encoding.default = 'CP1251'
 u8 = encoding.UTF8
 
-local folder =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.ide"
 local folder_txt =  getGameDirectory() .."\\modloader\\RandomChar\\RandomChar.txt"
 local folder_custom =  getGameDirectory() .."\\modloader\\RandomChar\\CUSTOM.ide"
 
@@ -26,6 +25,9 @@ changelog = [[
 		- Микрофиксы
 	RandomChar v0.4
 		- Изменен метод смены скина на аналог хука onSetPlayerSkin
+	RandomChar v0.5
+		- Теперь создается два файла RandomChar.txt и CUSTOM.ide, а не три. При добавлении новых скинов эти два файла всё так же необходимо удалять перед запуском игры
+		- Для удобного удаления двух файлов создана папка models
 ]]
 
 -- AUTHOR main hooks lib: RTD/RutreD(https://www.blast.hk/members/126461/)
@@ -388,7 +390,7 @@ local NameModel = {
 	[308] = "wfyclem", [309] = "wfycllv", [310] = "csherna", [311] = "dsherna";}
 
 --Taken from the sources of Custom SAA2 https://ugbase.eu/threads/samp-saa-custom-saa2-tool.4810/
-local standard_peds = [[1, TRUTH, TRUTH, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0, null, 9,9, PED_TYPE_SPC,VOICE_GNG_TRUTH ,VOICE_GNG_TRUTH
+local peds_ide = [[1, TRUTH, TRUTH, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0, null, 9,9, PED_TYPE_SPC,VOICE_GNG_TRUTH ,VOICE_GNG_TRUTH
 2, MACCER, MACCER, CIVMALE, STAT_STD_MISSION, man, 1FFF, 0, null, 9,9, PED_TYPE_SPC, VOICE_GNG_MACCER , VOICE_GNG_MACCER
 3, ANDRE, ANDRE, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GEN, VOICE_GEN_MALE01, VOICE_GEN_MALE01
 4, BBTHIN, BBTHIN, CIVMALE, STAT_SENSIBLE_GUY, man, 0, 0, man, 1,4, PED_TYPE_GANG, VOICE_GNG_BIG_BEAR, VOICE_GNG_BIG_BEAR
@@ -714,7 +716,7 @@ function SetModelIndex(this, modelIndex)
 end
 
 function main()
-	if not doesFileExist(folder) then GeneratedIDE() end
+	if not doesFileExist(folder_txt) or not doesFileExist(folder_custom)  then GeneratedIDE() end
 
 	repeat wait(0) until memory.read(0xC8D4C0, 4, false) == 9
 	repeat wait(0) until fixed_camera_to_skin()
@@ -739,17 +741,17 @@ function GeneratedIDE()
 	end
 
 	local t={}
-	for str in string.gmatch(standard_peds, "([^\n]+)") do
+	for str in string.gmatch(peds_ide, "([^\n]+)") do
 		local v_1, v_2, v_3 = tostring(str):match('^(%d+),(.+),(.+,.+,.+,.+,.+,.+,.+,.+,.+,.+,.+)$')
 		t[tonumber(v_1)] = v_3
 	end
 
 	config.chars = {}
 
-	local list = 'peds\n'
+	local list, list_txt = 'peds\n', ''
 
 	for k, v in ipairs(NameModel) do
-		local folder_dff = getGameDirectory() .."\\modloader\\RandomChar\\" ..v.. "\\*.dff"
+		local folder_dff = getGameDirectory() .."\\modloader\\RandomChar\\models\\" ..v.. "\\*.dff"
 		local search, file = findFirstFile(folder_dff)
 		if file ~= nil then config.chars[tostring(k)] = {k} end
 		while file do
@@ -759,29 +761,26 @@ function GeneratedIDE()
 				config.chars[tostring(k)][#config.chars[tostring(k)]+1] = tonumber(freeID[1])
 				table.remove(freeID, 1)
 				list = list .. char_new
+				list_txt = list_txt .. char_new
 			end
 			file = findNextFile(search)
 		end
-		if k == #NameModel then list = list .. 'end' end
 	end
-
-
-	local file = io.open(folder, 'w+')
-	file:write(list)
-	file:close()
+	
+	list = list .. 'end'
 
 	local file = io.open(folder_custom, 'w+')
 	file:write(list)
 	file:close()
 
 	local file = io.open(folder_txt, 'w+')
-	file:write("IDE data\\RandomChar.ide")
+	file:write(list_txt)
 	file:close()
 
 	savejson(convertTableToJsonString(config), "moonloader/config/RandomChar.json")
-	callFunction(0x81E5E6, 4, 0, 0, u8:decode"[RU] Сформированы:\n	RandomChar.ide\\CUSTOM.ide\\RandomChar.txt\n	Необходимо перезапустить игру\n[EN] Generated:\n	RandomChar.ide\\CUSTOM.ide\\RandomChar.txt\n	Need restart game", "RandomChar.lua", 0x00040000)
+	callFunction(0x81E5E6, 4, 0, 0, u8:decode"[RU] Сформированы:\n	CUSTOM.ide\\RandomChar.txt\n	Необходимо перезапустить игру\n[EN] Generated:\n	CUSTOM.ide\\RandomChar.txt\n	Need restart game", "RandomChar.lua", 0x00040000)
 	os.execute('taskkill /IM gta_sa.exe /F /T')
 end
 
 -- Licensed under the GPL-3.0 License
--- Copyright (c) 2021, dmitriyewich <https://github.com/dmitriyewich/RandomChar>
+-- Copyright (c) 2022, dmitriyewich <https://github.com/dmitriyewich/RandomChar>
